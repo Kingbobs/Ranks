@@ -2,7 +2,7 @@ name: CustomRanks
 version: 1.0.0
 api: [3.0.0]
 author: Kingbobs
-description: Allows setting custom ranks to users and modifying the chat format.
+description: Allows setting custom ranks to users and modifying the chat format:).
 main: shoghicp\CustomRanks\Main
 
 commands:
