@@ -1,0 +1,14 @@
+#Changes the text format (how chat messages are displayed)
+format: "<%s> %s"
+
+#Changes how the group is shown, %rank% being the rank and %name% being the player name
+group-format: "[%rank%] %name%"
+
+#Sets the default rank
+
+default-rank: Guest
+
+ranks:
+ - Admin
+ - Guest
+ - VIP
