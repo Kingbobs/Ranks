@@ -1,5 +1,5 @@
 # Ranks
-#commands:
+# commands:
  srank:
   description: "Sets a player rank"
   usage: "/srank <player> <rank>"
@@ -9,7 +9,7 @@
   usage: "/lrank"
   permission: "customranks.command.lrank"
 
-#permissions:
+# permissions:
  customranks:
   default: op
   description: "Allows using all the CustomRanks things"
