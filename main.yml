@@ -1,0 +1,123 @@
+<?php
+
+namespace shoghicp\CustomRanks;
+
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\event\Listener;
+use pocketmine\event\player\PlayerChatEvent;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\Player;
+use pocketmine\plugin\PluginBase;
+use pocketmine\utils\Config;
+use pocketmine\utils\TextFormat;
+
+class Main extends PluginBase implements Listener{
+	private $format;
+	private $groupFormat;
+	/** @var string[] */
+	private $rankDatabase = [];
+	/** @var Config */
+	private $userDatabase;
+
+	public function onEnable(){
+		$this->getLogger()->info("Loading data...");
+		$this->saveDefaultConfig();
+		$this->saveResource("users.yml", false); //Do not replace default
+		$config = $this->getConfig();
+		$this->format = $config->get("format");
+		$this->groupFormat = $config->get("group-format");
+		//This database could use MySQL or other things, but I won't do it on this tutorial
+		$this->userDatabase = new Config($this->getDataFolder() . "users.yml");
+		foreach($this->userDatabase->get("ranks") as $player => $rank){
+			$this->rankDatabase[strtolower($player)] = $rank;
+		}
+
+		$this->getServer()->getPluginManager()->registerEvents($this, $this); //Associate all the events defined on this class
+
+		// The plugin can be enabled while the server is running,
+		// so we have to make sure to update all players
+		foreach($this->getServer()->getOnlinePlayers() as $player){
+			$this->updateRank($player);
+		}
+		$this->getLogger()->info("Done!");
+	}
+
+	public function onDisable(){
+		$this->getLogger()->info("Restoring original names...");
+		//Remove all the group tags
+		foreach($this->getServer()->getOnlinePlayers() as $player){
+			$player->setDisplayName($player->getName());
+		}
+		$this->userDatabase->set("ranks", $this->rankDatabase);
+		$this->userDatabase->save();
+	}
+
+	public function onCommand(CommandSender $sender, Command $command, $label, array $args){
+		switch($command->getName()){
+			case "srank":
+				if(count($args) !== 2){
+					$sender->sendMessage(TextFormat::RED . "Usage: " . $command->getUsage());
+					return true;
+				}
+				$player = strtolower($args[0]);
+				$rank = $args[1];
+				if(!in_array($rank, $this->getConfig()->get("ranks"), true)){
+					$sender->sendMessage(TextFormat::RED . "The rank $rank does not exist!");
+					return true;
+				}
+				$this->rankDatabase[$player] = $rank;
+				if(($player = $this->getServer()->getPlayerExact($player)) instanceof Player){ //Update it too if it's online
+					$this->updateRank($player);
+				}
+				$sender->sendMessage("Rank set correctly!");
+				return true;
+			case "lrank":
+				$sender->sendMessage("Ranks: ". implode(", ", $this->getConfig()->get("ranks")));
+				return true;
+		}
+	}
+
+	/**
+	 * @param PlayerChatEvent $event
+	 *
+	 * @priority HIGHEST
+	 * @ignoreCancelled false
+	 */
+	public function onChat(PlayerChatEvent $event){
+		$event->setFormat($this->format);
+	}
+
+	/**
+	 * @param PlayerJoinEvent $event
+	 *
+	 * @priority HIGHEST
+	 * @ignoreCancelled false
+	 */
+	public function onJoin(PlayerJoinEvent $event){
+		$this->updateRank($event->getPlayer());
+	}
+
+	protected function updateRank(Player $player){
+		//TODO: check if using getDisplayName() doesn't break this so other plugins can add extra data
+		$displayName = str_replace(["%rank%", "%name%"], [$this->getRank($player), $player->getName()], $this->groupFormat);
+		$player->setDisplayName($displayName);
+	}
+
+	/**
+	 * It's public, so other plugins can use this method :)
+	 *
+	 * @param Player $player
+	 *
+	 * @return string
+	 */
+	public function getRank(Player $player){
+		//Case-insensitive player name key
+		if(isset($this->rankDatabase[strtolower($player->getName())])){
+			return $this->rankDatabase[strtolower($player->getName())];
+		}else{
+			$this->rankDatabase[strtolower($player->getName())] = $this->getConfig()->get("default-rank");
+			return $this->getConfig()->get("default-rank");
+		}
+	}
+}
